@@ -8,6 +8,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 add_executable(compiler_exec
     src/Compiler.cpp
     src/IRBuilder.cpp
+    src/TilingPass.cpp
 )
 
 target_include_directories(compiler_exec PUBLIC
