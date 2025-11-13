@@ -7,7 +7,11 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 add_executable(compiler_exec
     src/Compiler.cpp
-    src/IR.hpp
+    src/IRBuilder.cpp
+)
+
+target_include_directories(compiler_exec PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
 set_target_properties(compiler_exec PROPERTIES
