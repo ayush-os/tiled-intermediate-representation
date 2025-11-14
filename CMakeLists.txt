@@ -6,9 +6,10 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 add_executable(compiler_exec
-    src/Compiler.cpp
+    src/main.cpp
     src/IRBuilder.cpp
     src/TilingPass.cpp
+    src/CodeGenerator.cpp
 )
 
 target_include_directories(compiler_exec PUBLIC
