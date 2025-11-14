@@ -106,7 +106,6 @@ std::unique_ptr<IRNode> parseExpression(const std::string &expr_str) {
     return std::make_unique<Mul>(parseExpression(left), parseExpression(right));
   }
 
-  // Should only be reached if expression was surrounded by parentheses we removed
   return parseExpression(cleaned);
 }
 
@@ -176,7 +175,42 @@ std::unique_ptr<IRNode> buildUntiledIR(const std::string &input_program) {
 // Utility for Indentation
 std::string indent_level(int depth) { return std::string(depth * 4, ' '); }
 
-// Recursive Traversal Function
+// Recursive Traversal Function to print expressions for bounds/steps
+// Returns the string representation of the expression
+std::string printExpressionIR(const IRNode *node) {
+  if (!node)
+    return "NULL";
+
+  switch (node->getType()) {
+  case IRNodeType::Const: {
+    const Const *constant = static_cast<const Const *>(node);
+    return std::visit(
+        [](auto &&arg) -> std::string { return std::to_string(arg); },
+        constant->getValue());
+  }
+  case IRNodeType::Variable: {
+    return static_cast<const Variable *>(node)->getName();
+  }
+  case IRNodeType::Add: {
+    const Add *a = static_cast<const Add *>(node);
+    return "(" + printExpressionIR(a->operand_one_.get()) + " + " +
+           printExpressionIR(a->operand_two_.get()) + ")";
+  }
+  case IRNodeType::Mul: {
+    const Mul *m = static_cast<const Mul *>(node);
+    return "(" + printExpressionIR(m->operand_one_.get()) + " * " +
+           printExpressionIR(m->operand_two_.get()) + ")";
+  }
+  case IRNodeType::Min: {
+    const Min *m = static_cast<const Min *>(node);
+    return "MIN(" + printExpressionIR(m->operand_one_.get()) + ", " +
+           printExpressionIR(m->operand_two_.get()) + ")";
+  }
+  default:
+    return "[COMPLEX_EXPR]";
+  }
+}
+
 void printIR(const IRNode *node, int depth) {
   if (!node)
     return;
@@ -186,8 +220,14 @@ void printIR(const IRNode *node, int depth) {
   switch (node->getType()) {
   case IRNodeType::Loop: {
     const Loop *loop = static_cast<const Loop *>(node);
+
+    std::string lb_expr = printExpressionIR(loop->lower_bound_.get());
+    std::string ub_expr = printExpressionIR(loop->upper_bound_.get());
+    std::string step_expr = printExpressionIR(loop->step_.get());
+
     std::cout << "LOOP: for " << loop->index_ << " = ";
-    std::cout << "[LB] to [UB] step [STEP]" << std::endl;
+    std::cout << lb_expr << " to " << ub_expr << " step " << step_expr
+              << std::endl;
 
     for (const auto &child : loop->body_) {
       printIR(child.get(), depth + 1);
