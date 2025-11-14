@@ -113,12 +113,13 @@ std::unique_ptr<IRNode> tilingPass(IRNode *nd) {
 
   std::unique_ptr<IRNode> var_ii = std::make_unique<Variable>("ii");
   std::unique_ptr<IRNode> var_jj = std::make_unique<Variable>("jj");
-  std::unique_ptr<IRNode> var_t = std::make_unique<Variable>("T");
+  std::unique_ptr<IRNode> const_t =
+      std::make_unique<Const>(ConstValue(73), DType::Int32);
 
   std::unique_ptr<IRNode> add_ii_t = std::make_unique<Add>(
-      std::move(deepCopy(var_ii.get())), std::move(deepCopy(var_t.get())));
+      std::move(deepCopy(var_ii.get())), std::move(deepCopy(const_t.get())));
   std::unique_ptr<IRNode> add_jj_t = std::make_unique<Add>(
-      std::move(deepCopy(var_jj.get())), std::move(deepCopy(var_t.get())));
+      std::move(deepCopy(var_jj.get())), std::move(deepCopy(const_t.get())));
 
   std::unique_ptr<IRNode> loop_i_upper = std::make_unique<Min>(
       std::move(add_ii_t), std::move(deepCopy(og_loop_i->upper_bound_.get())));
@@ -133,11 +134,11 @@ std::unique_ptr<IRNode> tilingPass(IRNode *nd) {
   std::unique_ptr<IRNode> loop_jj = std::make_unique<Loop>(
       "jj", std::move(deepCopy(og_loop_j->lower_bound_.get())),
       std::move(deepCopy(og_loop_j->upper_bound_.get())),
-      std::move(deepCopy(var_t.get())));
+      std::move(deepCopy(const_t.get())));
   std::unique_ptr<IRNode> loop_ii = std::make_unique<Loop>(
       "ii", std::move(deepCopy(og_loop_i->lower_bound_.get())),
       std::move(deepCopy(og_loop_i->upper_bound_.get())),
-      std::move(deepCopy(var_t.get())));
+      std::move(deepCopy(const_t.get())));
 
   static_cast<Loop *>(loop_jj.get())->body_.push_back(std::move(cpy));
   static_cast<Loop *>(loop_ii.get())->body_.push_back(std::move(loop_jj));
