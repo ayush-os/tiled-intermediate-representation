@@ -1,5 +1,7 @@
 #include "TilingPass.hpp"
+#include "IR.hpp"
 #include <iostream>
+#include <memory>
 
 /**
  * @brief Helper function to deep copy a vector of IRNode unique pointers.
@@ -94,4 +96,51 @@ std::unique_ptr<IRNode> deepCopy(const IRNode *nd) {
   }
 }
 
-std::unique_ptr<IRNode> tilingPass(IRNode *nd) { return nullptr; }
+/**
+ * @brief Performs 2D loop tiling (i, j) -> (ii, jj, i, j) on a nested loop
+ * * @param nd Pointer to the root IRNode (expected to be the outer loop)
+ * @return A unique pointer to the newly created, tiled IR subtree
+ * WARNING: PROGRAM WILL CRASH IF IR IS NOT STRUCTURED AS 2 NESTED LOOPS
+ */
+std::unique_ptr<IRNode> tilingPass(IRNode *nd) {
+  Loop *og_loop_i = static_cast<Loop *>(nd);
+  Loop *og_loop_j = static_cast<Loop *>(og_loop_i->body_.front().get());
+
+  std::unique_ptr<IRNode> cpy = deepCopy(nd);
+
+  Loop *loop_i = static_cast<Loop *>(cpy.get());
+  Loop *loop_j = static_cast<Loop *>(loop_i->body_.front().get());
+
+  std::unique_ptr<IRNode> var_ii = std::make_unique<Variable>("ii");
+  std::unique_ptr<IRNode> var_jj = std::make_unique<Variable>("jj");
+  std::unique_ptr<IRNode> var_t = std::make_unique<Variable>("T");
+
+  std::unique_ptr<IRNode> add_ii_t = std::make_unique<Add>(
+      std::move(deepCopy(var_ii.get())), std::move(deepCopy(var_t.get())));
+  std::unique_ptr<IRNode> add_jj_t = std::make_unique<Add>(
+      std::move(deepCopy(var_jj.get())), std::move(deepCopy(var_t.get())));
+
+  std::unique_ptr<IRNode> loop_i_upper = std::make_unique<Min>(
+      std::move(add_ii_t), std::move(deepCopy(og_loop_i->upper_bound_.get())));
+  std::unique_ptr<IRNode> loop_j_upper = std::make_unique<Min>(
+      std::move(add_jj_t), std::move(deepCopy(og_loop_j->upper_bound_.get())));
+
+  loop_i->lower_bound_ = std::move(deepCopy(var_ii.get()));
+  loop_j->lower_bound_ = std::move(deepCopy(var_jj.get()));
+  loop_i->upper_bound_ = std::move(loop_i_upper);
+  loop_j->upper_bound_ = std::move(loop_j_upper);
+
+  std::unique_ptr<IRNode> loop_jj = std::make_unique<Loop>(
+      "jj", std::move(deepCopy(og_loop_j->lower_bound_.get())),
+      std::move(deepCopy(og_loop_j->upper_bound_.get())),
+      std::move(deepCopy(var_t.get())));
+  std::unique_ptr<IRNode> loop_ii = std::make_unique<Loop>(
+      "ii", std::move(deepCopy(og_loop_i->lower_bound_.get())),
+      std::move(deepCopy(og_loop_i->upper_bound_.get())),
+      std::move(deepCopy(var_t.get())));
+
+  static_cast<Loop *>(loop_jj.get())->body_.push_back(std::move(cpy));
+  static_cast<Loop *>(loop_ii.get())->body_.push_back(std::move(loop_jj));
+
+  return loop_ii;
+}
